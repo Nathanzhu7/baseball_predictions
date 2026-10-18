@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Large data files
+data/statcast_raw.pkl
+baseball_training.csv
+
+# Cached/derived artifacts (regenerable by running the pipeline)
+pitch_outcome_prediction/artifacts/batter_recency_cache.pkl
+pitch_characteristics/artifacts/pitch_characteristics.pkl
+simulation/artifacts/batted_ball.pkl
+
+# Calibration plots (regenerated on training)
+*.png
+
+# OS
+.DS_Store
