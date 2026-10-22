@@ -36,14 +36,10 @@ OUTCOME_MAP = {
 
 NUMERIC_FEATURES = [
     "release_speed",
-    "release_spin_rate",
-    "release_pos_x",
-    "release_pos_z",
     "plate_x",
     "plate_z",
     "pfx_x",
     "pfx_z",
-    "release_extension",
     "balls",
     "strikes",
 ]
@@ -169,6 +165,22 @@ def prepare_data(
     recency_std = train_recency.std().to_numpy("float32")
     recency_std = np.where(recency_std == 0, 1.0, recency_std)
 
+    # Per-batter strike zone boundaries (from Statcast sz_top / sz_bot)
+    # Use training data to compute mean zone per batter
+    _sz_top = pd.to_numeric(df["sz_top"], errors="coerce")
+    _sz_bot = pd.to_numeric(df["sz_bot"], errors="coerce")
+    _sz_df = df.assign(sz_top=_sz_top, sz_bot=_sz_bot).dropna(subset=["sz_top", "sz_bot"])
+    _batter_zone = _sz_df.groupby("batter").agg(
+        sz_top=("sz_top", "mean"), sz_bot=("sz_bot", "mean")
+    )
+    batter_zone = {
+        int(bid): (float(row.sz_top), float(row.sz_bot))
+        for bid, row in _batter_zone.iterrows()
+    }
+    # League average fallback
+    league_sz_top = float(_sz_df["sz_top"].mean())
+    league_sz_bot = float(_sz_df["sz_bot"].mean())
+
     # Game state normalization from training data
     game_state_mean = train[GAME_STATE_FEATURES].mean().to_numpy("float32")
     game_state_std = train[GAME_STATE_FEATURES].std().to_numpy("float32")
@@ -189,6 +201,9 @@ def prepare_data(
         "game_state_features": GAME_STATE_FEATURES,
         "game_state_mean": game_state_mean,
         "game_state_std": game_state_std,
+        "batter_zone": batter_zone,
+        "league_sz_top": league_sz_top,
+        "league_sz_bot": league_sz_bot,
     }
 
     with open(preprocessing_file, "wb") as f:

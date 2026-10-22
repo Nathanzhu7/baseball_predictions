@@ -306,6 +306,7 @@ def simulate_inning(pitcher_id, pitcher_hand, lineup, game_pitch_count=0,
 
         ab_record = {
             "batter_id": batter_id,
+            "batter_name": batter_info.get("name", str(batter_id)),
             "batter_hand": batter_hand,
             "result": result,
             "pitches": len(ab["pitches"]),
@@ -358,7 +359,8 @@ def print_inning(inning):
     outs = 0
     for i, ab in enumerate(inning["at_bats"]):
         outs_after = outs + ab["outs_added"]
-        print(f"  {i+1}. Batter {ab['batter_id']} ({ab['batter_hand']}HB): "
+        name = ab.get("batter_name", str(ab["batter_id"]))
+        print(f"  {i+1}. {name:<18s} ({ab['batter_hand']}HB): "
               f"{ab['result'].upper():16s} "
               f"({ab['pitches']} pitches)  "
               f"{ab['runs_scored']}R  "
@@ -375,21 +377,18 @@ def print_inning(inning):
 if __name__ == "__main__":
     from collections import Counter
 
-    np.random.seed(42)
-
     pitcher_id = 642547   # Freddy Peralta (RHP)
 
-    # A simplified lineup of real batters (Dodgers-ish)
     lineup = [
-        {"batter_id": 605141, "batter_hand": "R"},  # Mookie Betts
-        {"batter_id": 660271, "batter_hand": "L"},  # Shohei Ohtani
-        {"batter_id": 518692, "batter_hand": "L"},  # Freddie Freeman
-        {"batter_id": 592450, "batter_hand": "R"},  # Aaron Judge (pretend trade)
-        {"batter_id": 605141, "batter_hand": "R"},  # Betts again (short lineup demo)
-        {"batter_id": 660271, "batter_hand": "L"},  # Ohtani again
-        {"batter_id": 518692, "batter_hand": "L"},  # Freeman again
-        {"batter_id": 592450, "batter_hand": "R"},  # Judge again
-        {"batter_id": 592273, "batter_hand": "R"},  # Brandon Drury
+        {"batter_id": 605141, "batter_hand": "R", "name": "Mookie Betts"},
+        {"batter_id": 660271, "batter_hand": "L", "name": "Shohei Ohtani"},
+        {"batter_id": 518692, "batter_hand": "L", "name": "Freddie Freeman"},
+        {"batter_id": 592450, "batter_hand": "R", "name": "Aaron Judge"},
+        {"batter_id": 605141, "batter_hand": "R", "name": "Mookie Betts"},
+        {"batter_id": 660271, "batter_hand": "L", "name": "Shohei Ohtani"},
+        {"batter_id": 518692, "batter_hand": "L", "name": "Freddie Freeman"},
+        {"batter_id": 592450, "batter_hand": "R", "name": "Aaron Judge"},
+        {"batter_id": 592273, "batter_hand": "R", "name": "Brandon Drury"},
     ]
 
     print("=" * 65)

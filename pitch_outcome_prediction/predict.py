@@ -97,23 +97,42 @@ def predict_pitch(pitcher_id, batter_id, pitch, prediction_date=None, game_state
 
     with torch.no_grad():
         logits = model(pitcher, batter, features)
-        probabilities = torch.softmax(logits, dim=1)[0]
+        probs = torch.softmax(logits, dim=1)[0].numpy()
 
-    return dict(zip(prep["outcomes"], probabilities.tolist()))
+    # Rule-based strike zone override:
+    # In zone → cannot be a ball; outside zone → cannot be a called strike.
+    plate_x = pitch.get("plate_x", 0.0)
+    plate_z = pitch.get("plate_z", 2.5)
+    sz_top, sz_bot = prep["batter_zone"].get(
+        batter_id, (prep["league_sz_top"], prep["league_sz_bot"])
+    )
+    in_zone = abs(plate_x) <= 0.708 and sz_bot <= plate_z <= sz_top
+
+    outcomes = prep["outcomes"]
+    ball_idx = outcomes.index("ball")
+    cs_idx = outcomes.index("called_strike")
+
+    if in_zone:
+        probs[ball_idx] = 0.0
+    else:
+        probs[cs_idx] = 0.0
+
+    # Renormalize
+    total = probs.sum()
+    if total > 0:
+        probs = probs / total
+
+    return dict(zip(outcomes, probs.tolist()))
 
 
 if __name__ == "__main__":
     pitch = {
         "pitch_type": "FF",
         "release_speed": 95.0,
-        "release_spin_rate": 2400,
-        "release_pos_x": -2.0,
-        "release_pos_z": 6.0,
         "plate_x": 0.2,
         "plate_z": 2.5,
         "pfx_x": -0.5,
         "pfx_z": 1.5,
-        "release_extension": 6.2,
         "balls": 1,
         "strikes": 1,
     }

@@ -4,10 +4,14 @@ Usage:
     python demo.py
 """
 
+import pickle
 import numpy as np
 from pitch_selection.predict import sample_pitch_type
 from pitch_characteristics.predict import generate_pitch_characteristics
 from pitch_outcome_prediction.predict import predict_pitch
+
+with open("pitch_outcome_prediction/artifacts/preprocessing.pkl", "rb") as f:
+    _prep = pickle.load(f)
 
 
 def generate_and_predict(pitcher_id, batter_id, game_context, prediction_date=None):
@@ -43,12 +47,17 @@ def main():
         "pitcher_hand": "R",
     }
 
-    np.random.seed(42)
+    # np.random.seed(42)
 
-    # Single pitch demo
+    # Strike zone for this batter
+    sz_top, sz_bot = _prep["batter_zone"].get(
+        batter_id, (_prep["league_sz_top"], _prep["league_sz_bot"])
+    )
     print("=" * 60)
     print("Single pitch: Peralta vs Freeman, 1-1 count")
     print("=" * 60)
+    print(f"\nStrike zone (Freeman):")
+    print(f"  x: [-0.708, +0.708]  z: [{sz_bot:.2f}, {sz_top:.2f}]")
 
     pitch_type, pitch, outcome = generate_and_predict(
         pitcher_id, batter_id, game_context, prediction_date="2025-07-15"
@@ -63,46 +72,22 @@ def main():
     for outcome_name, prob in outcome.items():
         print(f"  {outcome_name:20s}: {prob:.2%}")
 
-    # Generate 100 pitches and summarize
+    # Generate 100 pitches and show pitch type distribution
     print("\n" + "=" * 60)
     print("100 pitches: Peralta vs Freeman, 1-1 count")
     print("=" * 60)
 
+    from collections import Counter
     pitch_types_sampled = []
-    velocities = []
-    spins = []
-    plate_xs = []
-    plate_zs = []
-
     for _ in range(100):
-        pt, pitch, _ = generate_and_predict(
+        pt, _, _ = generate_and_predict(
             pitcher_id, batter_id, game_context, prediction_date="2025-07-15"
         )
         pitch_types_sampled.append(pt)
-        velocities.append(pitch["release_speed"])
-        spins.append(pitch["release_spin_rate"])
-        plate_xs.append(pitch["plate_x"])
-        plate_zs.append(pitch["plate_z"])
 
-    # Pitch type frequencies
     print(f"\nPitch type distribution (n=100):")
-    from collections import Counter
-    counts = Counter(pitch_types_sampled)
-    for pt, n in counts.most_common():
+    for pt, n in Counter(pitch_types_sampled).most_common():
         print(f"  {pt:6s}: {n:3d}")
-
-    # Summary statistics
-    print(f"\nCharacteristic summary:")
-    print(f"  {'':20s} {'Mean':>8s} {'Std':>8s} {'Min':>8s} {'Max':>8s}")
-    print(f"  {'-'*52}")
-    for name, vals in [
-        ("Velocity (mph)", velocities),
-        ("Spin (rpm)", spins),
-        ("Plate X (ft)", plate_xs),
-        ("Plate Z (ft)", plate_zs),
-    ]:
-        arr = np.array(vals)
-        print(f"  {name:20s} {arr.mean():8.1f} {arr.std():8.1f} {arr.min():8.1f} {arr.max():8.1f}")
 
 
 if __name__ == "__main__":
